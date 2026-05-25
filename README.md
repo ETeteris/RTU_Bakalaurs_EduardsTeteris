@@ -4,7 +4,8 @@
 
 Spraudnis ir izstrādāts bakalaura darba ietvaros.
 
-Darba autors: Eduards Teteris
+Darba autors: Eduards Teteris 
+
 Darba vadītāja: Oksana Ņikiforova
 
 ## Funkcijas
