@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Figma AI Assistant</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f0e8;
+        color: #2d2a24;
+        padding: 0;
+        min-height: 100vh;
+      }
+
+      /* ── Galvene ────────────────────────────────── */
+      .header {
+        padding: 18px 16px 14px;
+        border-bottom: 1px solid rgba(0,0,0,0.07);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo {
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, #417d7b, #5aa3a1);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+
+      .header-text h1 {
+        font-size: 13px;
+        font-weight: 600;
+        color: #2d2a24;
+        letter-spacing: -0.01em;
+      }
+
+      .header-text p {
+        font-size: 11px;
+        color: #9c8f7a;
+        margin-top: 1px;
+      }
+
+      /* ── Galvenais saturs ────────────────────────── */
+      .content {
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* ── Uzvednes kartīte ────────────────────────── */
+      .card {
+        background: #fdf8f0;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 12px;
+        padding: 14px;
+      }
+
+      .card-label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #417d7b;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .card-label::before {
+        content: "";
+        width: 3px;
+        height: 10px;
+        background: linear-gradient(180deg, #417d7b, #6aaeac);
+        border-radius: 2px;
+        display: inline-block;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .ai-input {
+        flex: 1;
+        padding: 10px 12px;
+        background: #f5f0e8;
+        border: 1px solid rgba(0,0,0,0.12);
+        border-radius: 8px;
+        font-size: 12px;
+        font-family: inherit;
+        color: #2d2a24;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+
+      .ai-input::placeholder { color: #b5a898; }
+
+      .ai-input:focus {
+        outline: none;
+        border-color: #417d7b;
+        box-shadow: 0 0 0 3px rgba(65,125,123,0.15);
+      }
+
+      .run-btn {
+        padding: 10px 16px;
+        background: linear-gradient(135deg, #417d7b, #2d5958);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: opacity 0.15s, transform 0.1s;
+        letter-spacing: 0.01em;
+      }
+
+      .run-btn:hover:not(:disabled) {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+
+      .run-btn:active:not(:disabled) { transform: translateY(0); }
+      .run-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+      .hints {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .hint-chip {
+        font-size: 10px;
+        padding: 3px 8px;
+        background: rgba(65,125,123,0.08);
+        border: 1px solid rgba(65,125,123,0.2);
+        border-radius: 20px;
+        color: #417d7b;
+        cursor: pointer;
+        transition: background 0.15s;
+        user-select: none;
+      }
+
+      .hint-chip:hover {
+        background: rgba(65,125,123,0.15);
+      }
+
+      /* ── Rezultāta paziņojums ────────────────────── */
+      .result-banner {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        line-height: 1.5;
+        display: none;
+        border-left: 3px solid transparent;
+      }
+
+      .result-banner.active { display: block; }
+
+      .result-banner.thinking {
+        background: rgba(0,0,0,0.04);
+        border-color: #c5b9a8;
+        color: #9c8f7a;
+      }
+
+      .result-banner.success {
+        background: rgba(52,211,153,0.08);
+        border-color: #34d399;
+        color: #6ee7b7;
+      }
+
+      .result-banner.error {
+        background: rgba(248,113,113,0.08);
+        border-color: #f87171;
+        color: #fca5a5;
+      }
+
+      /* ── Atdalītājs ──────────────────────────────── */
+      .divider {
+        height: 1px;
+        background: rgba(0,0,0,0.06);
+      }
+
+      /* ── Bibliotēkas poga ────────────────────────── */
+      .lib-btn {
+        width: 100%;
+        padding: 11px 14px;
+        background: #fdf8f0;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 12px;
+        color: #2d2a24;
+        font-size: 12px;
+        font-weight: 500;
+        font-family: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.15s, border-color 0.15s;
+        text-align: left;
+      }
+
+      .lib-btn:hover:not(:disabled) {
+        background: #f7efe2;
+        border-color: rgba(0,0,0,0.13);
+      }
+
+      .lib-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+      .lib-btn-icon {
+        width: 24px;
+        height: 24px;
+        background: rgba(65,125,123,0.1);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        flex-shrink: 0;
+      }
+
+      .lib-btn-text { flex: 1; }
+      .lib-btn-title { font-weight: 600; color: #2d2a24; font-size: 12px; }
+      .lib-btn-sub { font-size: 10px; color: #9c8f7a; margin-top: 1px; }
+
+      .lib-btn-arrow {
+        font-size: 14px;
+        color: #c5b9a8;
+        transition: color 0.15s;
+      }
+
+      .lib-btn:hover:not(:disabled) .lib-btn-arrow { color: #417d7b; }
+
+      /* ── Statusa paziņojums ──────────────────────── */
+      .status-toast {
+        padding: 9px 12px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 500;
+        display: none;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .status-toast.active { display: flex; }
+
+      .status-toast.success {
+        background: rgba(52,211,153,0.08);
+        border: 1px solid rgba(52,211,153,0.2);
+        color: #6ee7b7;
+      }
+
+      .status-toast.error {
+        background: rgba(248,113,113,0.08);
+        border: 1px solid rgba(248,113,113,0.2);
+        color: #fca5a5;
+      }
+
+      .status-toast.loading {
+        background: rgba(65,125,123,0.08);
+        border: 1px solid rgba(65,125,123,0.2);
+        color: #6aaeac;
+      }
+
+      .toast-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+      }
+
+      .toast-dot.pulse {
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+
+      /* ── Aktivitātes žurnāls ─────────────────────── */
+      .progress-section {
+        background: #fdf8f0;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 10px;
+        overflow: hidden;
+        display: none;
+      }
+
+      .progress-section.active { display: block; }
+
+      .progress-header {
+        padding: 8px 12px;
+        background: rgba(0,0,0,0.03);
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9c8f7a;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .progress-header::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #417d7b;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+
+      .progress-log {
+        max-height: 100px;
+        overflow-y: auto;
+        padding: 8px 12px;
+      }
+
+      .progress-log::-webkit-scrollbar { width: 3px; }
+      .progress-log::-webkit-scrollbar-track { background: transparent; }
+      .progress-log::-webkit-scrollbar-thumb { background: #d4c9b8; border-radius: 2px; }
+
+      .progress-item {
+        font-size: 11px;
+        line-height: 1.6;
+        color: #b5a898;
+        font-family: "SF Mono", "Monaco", "Courier New", monospace;
+        padding: 1px 0;
+      }
+
+      .progress-item:last-child { color: #417d7b; }
+
+      /* ── Servera statusa josla ───────────────────── */
+      .server-bar {
+        margin: 0 16px 0;
+        border-radius: 10px;
+        padding: 9px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        font-weight: 500;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .server-bar.checking {
+        background: rgba(65,125,123,0.07);
+        border: 1px solid rgba(65,125,123,0.18);
+        color: #6aaeac;
+      }
+
+      .server-bar.online {
+        background: rgba(52,211,153,0.07);
+        border: 1px solid rgba(52,211,153,0.18);
+        color: #34c98a;
+      }
+
+      .server-bar.offline {
+        background: rgba(248,113,113,0.07);
+        border: 1px solid rgba(248,113,113,0.22);
+        color: #f87171;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .server-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+      }
+
+      .server-dot.pulse { animation: pulse 1.2s ease-in-out infinite; }
+
+      .server-label { flex: 1; }
+
+      .server-cmd {
+        width: 100%;
+        margin-top: 4px;
+        padding: 6px 9px;
+        background: rgba(0,0,0,0.06);
+        border-radius: 6px;
+        font-family: "SF Mono", "Monaco", "Courier New", monospace;
+        font-size: 10px;
+        color: #d97777;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .copy-cmd-btn {
+        padding: 2px 8px;
+        background: rgba(248,113,113,0.15);
+        border: 1px solid rgba(248,113,113,0.25);
+        border-radius: 4px;
+        font-size: 10px;
+        font-family: inherit;
+        color: #f87171;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s;
+      }
+
+      .copy-cmd-btn:hover { background: rgba(248,113,113,0.25); }
+
+      .retry-btn {
+        padding: 3px 10px;
+        background: rgba(248,113,113,0.12);
+        border: 1px solid rgba(248,113,113,0.25);
+        border-radius: 5px;
+        font-size: 10px;
+        font-family: inherit;
+        color: #f87171;
+        cursor: pointer;
+        transition: background 0.15s;
+        flex-shrink: 0;
+      }
+
+      .retry-btn:hover { background: rgba(248,113,113,0.22); }
+
+      .content-area {
+        opacity: 1;
+        transition: opacity 0.2s;
+      }
+
+      .content-area.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="header">
+      <div class="logo"><span style="font-size:10px;font-weight:700;color:#fff;letter-spacing:-0.5px;font-family:inherit;">ET</span></div>
+      <div class="header-text">
+        <h1>AI Assistant</h1>
+        <p>Powered by Claude</p>
+      </div>
+    </div>
+
+    <!-- Servera statusa josla -->
+    <div style="padding: 10px 0 2px;">
+      <div id="serverBar" class="server-bar checking">
+        <div id="serverDot" class="server-dot pulse"></div>
+        <span id="serverLabel" class="server-label">Checking backend…</span>
+      </div>
+    </div>
+
+    <div class="content">
+    <div id="contentArea" class="content-area disabled">
+
+      <!-- Krāsu pārveidošanas kartīte -->
+      <div class="card">
+        <div class="card-label">Screen Transformation</div>
+        <div class="input-row">
+          <input
+            type="text"
+            id="promptInput"
+            class="ai-input"
+            placeholder="Describe what to do with the selected frame..."
+          />
+          <button id="promptBtn" class="run-btn">Run</button>
+        </div>
+        <div class="hints">
+          <span class="hint-chip" data-hint="dark mode">dark mode</span>
+          <span class="hint-chip" data-hint="high contrast">high contrast</span>
+          <span class="hint-chip" data-hint="colorblind-friendly">colorblind</span>
+        </div>
+        <div id="promptResult" class="result-banner"></div>
+      </div>
+
+      <!-- Ekrāna izmēra izvēle -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:11px; color:#9c8f7a; white-space:nowrap; font-weight:600;">Screen size</span>
+        <select id="screenSizeSelect" class="ai-input" style="font-size:11px; padding:6px 8px;">
+          <option value="393x852">iPhone 16 (393 × 852)</option>
+          <option value="402x874">iPhone 17 (402 × 874)</option>
+          <option value="440x956">iPhone 16 Pro Max (440 × 956)</option>
+          <option value="430x932">iPhone 16 Plus (430 × 932)</option>
+          <option value="390x844">iPhone 13 &amp; 14 (390 × 844)</option>
+          <option value="412x917">Android Compact (412 × 917)</option>
+        </select>
+      </div>
+
+      <!-- Ekrāna ģenerēšanas kartīte -->
+      <div class="card">
+        <div class="card-label">Generate Screen</div>
+        <div class="input-row">
+          <input
+            type="text"
+            id="screenInput"
+            class="ai-input"
+            placeholder="e.g. login screen, dashboard, settings page..."
+          />
+          <button id="screenBtn" class="run-btn">Build</button>
+        </div>
+        <div class="hints">
+          <span class="hint-chip" data-target="screen" data-hint="login screen">login</span>
+          <span class="hint-chip" data-target="screen" data-hint="dashboard">dashboard</span>
+          <span class="hint-chip" data-target="screen" data-hint="profile page">profile</span>
+          <span class="hint-chip" data-target="screen" data-hint="settings screen">settings</span>
+        </div>
+        <div id="screenResult" class="result-banner"></div>
+      </div>
+
+      <!-- UX ceļa ģeneratora kartīte -->
+      <div class="card">
+        <div class="card-label">UX Journey Generator</div>
+        <div class="input-row">
+          <input
+            type="text"
+            id="journeyInput"
+            class="ai-input"
+            placeholder="Login → Dashboard → Settings"
+          />
+          <button id="journeyBtn" class="run-btn">Build</button>
+        </div>
+        <div class="hints">
+          <span class="hint-chip" data-target="journey" data-hint="Login → Dashboard → Settings">Login flow</span>
+          <span class="hint-chip" data-target="journey" data-hint="Onboarding → Home → Profile → Settings">Onboarding</span>
+          <span class="hint-chip" data-target="journey" data-hint="Product List → Product Detail → Cart → Checkout">Shopping</span>
+        </div>
+        <div id="journeyResult" class="result-banner"></div>
+      </div>
+
+      <!-- Bibliotēkas izveides poga -->
+      <button id="generateBtn" class="lib-btn">
+        <div class="lib-btn-icon">⬡</div>
+        <div class="lib-btn-text">
+          <div class="lib-btn-title">Generate Asset Library</div>
+          <div class="lib-btn-sub">Organizes frame layers into a component library page</div>
+        </div>
+        <div class="lib-btn-arrow">›</div>
+      </button>
+
+      <!-- Statusa paziņojums -->
+      <div id="statusToast" class="status-toast">
+        <div class="toast-dot"></div>
+        <span id="statusText"></span>
+      </div>
+
+      <!-- Aktivitātes žurnāls -->
+      <div id="progressSection" class="progress-section">
+        <div class="progress-header">Activity</div>
+        <div id="progressLog" class="progress-log"></div>
+      </div>
+
+    </div> <!-- /content-area -->
+    </div> <!-- /content -->
+
+    <script>
+      // ── Servera statusa pārbaude ────────────────────────────────────────────
+      var serverBar    = document.getElementById("serverBar");
+      var serverDot    = document.getElementById("serverDot");
+      var serverLabel  = document.getElementById("serverLabel");
+      var contentArea  = document.getElementById("contentArea");
+      var healthTimer  = null;
+
+      function setServerOnline() {
+        serverBar.className = "server-bar online";
+        serverDot.className = "server-dot";
+        serverLabel.textContent = "Backend connected";
+        contentArea.classList.remove("disabled");
+        var extra = serverBar.querySelector(".server-cmd");
+        if (extra) serverBar.removeChild(extra);
+        var retryBtn = serverBar.querySelector(".retry-btn");
+        if (retryBtn) serverBar.removeChild(retryBtn);
+      }
+
+      function setServerOffline() {
+        serverBar.className = "server-bar offline";
+        serverDot.className = "server-dot";
+        serverLabel.textContent = "Backend offline";
+        contentArea.classList.add("disabled");
+        // Komandu un retry pogu pievieno tikai vienu reizi.
+        if (!serverBar.querySelector(".server-cmd")) {
+          var cmd = document.createElement("div");
+          cmd.className = "server-cmd";
+          cmd.innerHTML = '<span>node server.js</span>';
+          var copyBtn = document.createElement("button");
+          copyBtn.className = "copy-cmd-btn";
+          copyBtn.textContent = "Copy";
+          copyBtn.addEventListener("click", function() {
+            navigator.clipboard.writeText("node server.js").then(function() {
+              copyBtn.textContent = "Copied!";
+              setTimeout(function() { copyBtn.textContent = "Copy"; }, 1500);
+            });
+          });
+          cmd.appendChild(copyBtn);
+          serverBar.appendChild(cmd);
+        }
+        if (!serverBar.querySelector(".retry-btn")) {
+          var retryBtn = document.createElement("button");
+          retryBtn.className = "retry-btn";
+          retryBtn.textContent = "Retry";
+          retryBtn.addEventListener("click", function() {
+            setServerChecking();
+            checkHealth();
+          });
+          serverLabel.insertAdjacentElement("afterend", retryBtn);
+        }
+      }
+
+      function setServerChecking() {
+        serverBar.className = "server-bar checking";
+        serverDot.className = "server-dot pulse";
+        serverLabel.textContent = "Checking backend…";
+      }
+
+      function checkHealth() {
+        fetch("http://localhost:3000/health")
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data.status === "ok") {
+              setServerOnline();
+            } else {
+              setServerOffline();
+            }
+          })
+          .catch(function() {
+            setServerOffline();
+          });
+      }
+
+      // Pārbaude lapas ielādē un pēc tam ik pa 15 sekundēm.
+      checkHealth();
+      healthTimer = setInterval(checkHealth, 15000);
+      // ────────────────────────────────────────────────────────────────────────
+
+      var screenSizeSelect = document.getElementById("screenSizeSelect");
+
+      function getScreenDims() {
+        var parts = screenSizeSelect.value.split("x");
+        return { w: parseInt(parts[0]), h: parseInt(parts[1]) };
+      }
+
+      var promptInput     = document.getElementById("promptInput");
+      var promptBtn       = document.getElementById("promptBtn");
+      var promptResult    = document.getElementById("promptResult");
+      var screenInput     = document.getElementById("screenInput");
+      var screenBtn       = document.getElementById("screenBtn");
+      var screenResult    = document.getElementById("screenResult");
+      var generateBtn     = document.getElementById("generateBtn");
+      var statusToast     = document.getElementById("statusToast");
+      var statusText      = document.getElementById("statusText");
+      var progressSection = document.getElementById("progressSection");
+      var progressLog     = document.getElementById("progressLog");
+      var journeyInput    = document.getElementById("journeyInput");
+      var journeyBtn      = document.getElementById("journeyBtn");
+      var journeyResult   = document.getElementById("journeyResult");
+
+      // Pogu nospiešana aizpilda atbilstošo ievades lauku.
+      document.querySelectorAll(".hint-chip").forEach(function(chip) {
+        chip.addEventListener("click", function() {
+          var target = chip.getAttribute("data-target");
+          var hint = chip.getAttribute("data-hint");
+          if (target === "screen") {
+            screenInput.value = hint;
+            screenInput.focus();
+          } else if (target === "journey") {
+            journeyInput.value = hint;
+            journeyInput.focus();
+          } else {
+            promptInput.value = hint;
+            promptInput.focus();
+          }
+        });
+      });
+
+      function setStatus(type, text) {
+        statusText.textContent = text;
+        statusToast.className = "status-toast active " + type;
+        var dot = statusToast.querySelector(".toast-dot");
+        dot.className = "toast-dot" + (type === "loading" ? " pulse" : "");
+      }
+
+      function clearStatus() {
+        statusToast.className = "status-toast";
+      }
+
+      function addProgress(msg) {
+        var item = document.createElement("div");
+        item.className = "progress-item";
+        item.textContent = "› " + msg;
+        progressLog.appendChild(item);
+        progressSection.classList.add("active");
+        progressLog.scrollTop = progressLog.scrollHeight;
+      }
+
+      function clearProgress() {
+        progressLog.innerHTML = "";
+        progressSection.classList.remove("active");
+      }
+
+      function showResult(el, text, type) {
+        el.textContent = text;
+        el.className = "result-banner active" + (type ? " " + type : "");
+      }
+
+      function showPromptResult(text, type) { showResult(promptResult, text, type); }
+
+      promptBtn.addEventListener("click", function() {
+        var p = promptInput.value.trim();
+        if (!p) return;
+        promptBtn.disabled = true;
+        clearProgress();
+        clearStatus();
+        showPromptResult("Thinking...", "thinking");
+        parent.postMessage({ pluginMessage: { type: "execute-prompt", prompt: p } }, "*");
+      });
+
+      promptInput.addEventListener("keypress", function(e) {
+        if (e.key === "Enter" && !promptBtn.disabled) promptBtn.click();
+      });
+
+      screenBtn.addEventListener("click", function() {
+        var p = screenInput.value.trim();
+        if (!p) return;
+        screenBtn.disabled = true;
+        clearProgress();
+        clearStatus();
+        showResult(screenResult, "Thinking...", "thinking");
+        var dims = getScreenDims();
+        parent.postMessage({ pluginMessage: { type: "generate-screen", prompt: p, screenWidth: dims.w, screenHeight: dims.h } }, "*");
+      });
+
+      screenInput.addEventListener("keypress", function(e) {
+        if (e.key === "Enter" && !screenBtn.disabled) screenBtn.click();
+      });
+
+      journeyBtn.addEventListener("click", function() {
+        var p = journeyInput.value.trim();
+        if (!p) return;
+        journeyBtn.disabled = true;
+        clearProgress();
+        clearStatus();
+        showResult(journeyResult, "Starting journey...", "thinking");
+        var dims = getScreenDims();
+        parent.postMessage({ pluginMessage: { type: "generate-journey", input: p, screenWidth: dims.w, screenHeight: dims.h } }, "*");
+      });
+
+      journeyInput.addEventListener("keypress", function(e) {
+        if (e.key === "Enter" && !journeyBtn.disabled) journeyBtn.click();
+      });
+
+      generateBtn.addEventListener("click", function() {
+        clearProgress();
+        clearStatus();
+        parent.postMessage({ pluginMessage: { type: "generate-library" } }, "*");
+      });
+
+      window.onmessage = function(event) {
+        var msg = event.data.pluginMessage;
+        if (!msg) return;
+
+        if (msg.type === "progress") {
+          addProgress(msg.message);
+        }
+
+        if (msg.type === "execute-success") {
+          showPromptResult("✓ " + msg.message, "success");
+          promptBtn.disabled = false;
+          promptInput.value = "";
+        }
+
+        if (msg.type === "execute-response") {
+          showPromptResult(msg.message, "");
+          promptBtn.disabled = false;
+        }
+
+        if (msg.type === "execute-error") {
+          showPromptResult(msg.message, "error");
+          promptBtn.disabled = false;
+        }
+
+        if (msg.type === "loading") {
+          setStatus("loading", msg.message || "Working...");
+          generateBtn.disabled = true;
+        }
+
+        if (msg.type === "success") {
+          setStatus("success", msg.message);
+          generateBtn.disabled = false;
+        }
+
+        if (msg.type === "error") {
+          setStatus("error", msg.message);
+          generateBtn.disabled = false;
+          promptBtn.disabled = false;
+          screenBtn.disabled = false;
+          journeyBtn.disabled = false;
+        }
+
+        if (msg.type === "screen-success") {
+          showResult(screenResult, "✓ " + msg.message, "success");
+          screenBtn.disabled = false;
+          screenInput.value = "";
+        }
+
+        if (msg.type === "screen-error") {
+          showResult(screenResult, msg.message, "error");
+          screenBtn.disabled = false;
+        }
+
+        if (msg.type === "journey-progress") {
+          addProgress("[" + msg.current + "/" + msg.total + "] " + msg.message);
+          showResult(journeyResult, "(" + msg.current + "/" + msg.total + ") " + msg.message, "thinking");
+        }
+
+        if (msg.type === "journey-complete") {
+          showResult(journeyResult, "✓ " + msg.message, "success");
+          journeyBtn.disabled = false;
+          journeyInput.value = "";
+        }
+
+        if (msg.type === "journey-error") {
+          showResult(journeyResult, msg.message, "error");
+          journeyBtn.disabled = false;
+        }
+
+        // code.js lūdz UI veikt execute-prompt fetch.
+        if (msg.type === "do-fetch-execute-prompt") {
+          addProgress("Connecting to backend...");
+          fetch("http://localhost:3000/api/execute-prompt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: msg.prompt, colors: msg.colors, frameName: msg.frameName })
+          })
+          .then(function(res) {
+            return res.json().then(function(body) {
+              if (!res.ok) throw new Error(body.message || body.error || "Server error " + res.status);
+              return body;
+            });
+          })
+          .then(function(data) {
+            parent.postMessage({ pluginMessage: {
+              type: "execute-prompt-result",
+              data: data,
+              originalFrame: msg.frameId
+            }}, "*");
+          })
+          .catch(function(err) {
+            if (err.message.includes("fetch") || err.message.includes("Failed")) { checkHealth(); }
+            parent.postMessage({ pluginMessage: {
+              type: "fetch-error",
+              message: err.message.includes("fetch") ? "Backend is offline. Start the server and retry." : err.message
+            }}, "*");
+            promptBtn.disabled = false;
+          });
+        }
+
+        // code.js lūdz UI veikt generate-screen fetch.
+        if (msg.type === "do-fetch-generate-screen") {
+          var screenController = new AbortController();
+          var screenTimeout = setTimeout(function() { screenController.abort(); }, 200000);
+          fetch("http://localhost:3000/api/generate-screen", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: msg.prompt, colors: msg.colors, fonts: msg.fonts, palette: msg.palette, categories: msg.categories, libraryComponents: msg.libraryComponents, width: msg.screenWidth, height: msg.screenHeight }),
+            signal: screenController.signal
+          })
+          .then(function(res) {
+            return res.json().then(function(body) {
+              if (!res.ok) throw new Error(body.message || body.error || "Server error " + res.status);
+              return body;
+            });
+          })
+          .then(function(data) {
+            clearTimeout(screenTimeout);
+            parent.postMessage({ pluginMessage: { type: "generate-screen-result", data: data, isJourney: msg.isJourney } }, "*");
+          })
+          .catch(function(err) {
+            clearTimeout(screenTimeout);
+            var errMsg = err.name === "AbortError"
+              ? "Request timed out (90s). Try a simpler prompt or check the terminal."
+              : err.message.includes("fetch") ? "Backend is offline. Start the server and retry." : err.message;
+            if (err.message && (err.message.includes("fetch") || err.message.includes("Failed"))) { checkHealth(); }
+            if (msg.isJourney) {
+              showResult(journeyResult, errMsg, "error");
+              journeyBtn.disabled = false;
+            } else {
+              showResult(screenResult, errMsg, "error");
+              screenBtn.disabled = false;
+            }
+          });
+        }
+
+        // code.js lūdz UI veikt generate-library fetch.
+        if (msg.type === "do-fetch-generate-library") {
+          fetch("http://localhost:3000/api/generate-library", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ components: msg.components, frameName: msg.frameName, colors: msg.colors })
+          })
+          .then(function(res) {
+            return res.json().then(function(body) {
+              if (!res.ok) throw new Error(body.message || body.error || "Server error " + res.status);
+              return body;
+            });
+          })
+          .then(function(data) {
+            parent.postMessage({ pluginMessage: {
+              type: "generate-library-result",
+              data: data
+            }}, "*");
+          })
+          .catch(function(err) {
+            if (err.message.includes("fetch") || err.message.includes("Failed")) { checkHealth(); }
+            parent.postMessage({ pluginMessage: {
+              type: "fetch-error",
+              message: err.message.includes("fetch") ? "Backend is offline. Start the server and retry." : err.message
+            }}, "*");
+            generateBtn.disabled = false;
+          });
+        }
+      };
+    </script>
+  </body>
+</html>

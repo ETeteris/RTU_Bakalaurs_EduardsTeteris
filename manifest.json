@@ -1,0 +1,21 @@
+{
+  "name": "BD",
+  "id": "1621439445068771810",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "documentAccess": "dynamic-page",
+  "editorType": [
+    "figma"
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://api.anthropic.com"
+    ],
+    "devAllowedDomains": [
+      "http://localhost:3000"
+    ]
+  }
+}
