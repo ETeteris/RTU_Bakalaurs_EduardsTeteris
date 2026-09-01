@@ -1,77 +1,130 @@
 # Figma AI Design Assistant
 
-Šis ir Figma spraudnis, kas izmanto Anthropic Claude API, lai palīdzētu automatizēt vairākus UI/UX dizaina uzdevumus Figma vidē.
+This is a Figma plugin that uses the Anthropic Claude API to help automate several
+UI/UX design tasks inside Figma.
 
-Spraudnis ir izstrādāts bakalaura darba ietvaros.
+The plugin was developed as part of a bachelor's thesis.
 
-Darba autors: Eduards Teteris 
+Author: Eduards Teteris
 
-Darba vadītāja: Oksana Ņikiforova
+Supervisor: Oksana Ņikiforova
 
-## Funkcijas
+## Features
 
-| Funkcija | Apraksts |
+| Feature | Description |
 |---|---|
-| **Restyle** | Pārveido atlasīta Figma rāmja krāsas pēc lietotāja teksta komandas, piemēram, `dark mode`, `high contrast` vai `sepia`. Oriģinālais rāmis netiek mainīts — tiek izveidots jauns dublikāts. |
-| **Generate Library** | Nolasa atlasīto Figma rāmi un izveido strukturētu `Asset Library` lapu ar komponentēm un krāsu paleti. Ja bibliotēka jau eksistē, tā tiek papildināta bez dublikātu veidošanas. |
-| **Generate Screen** | Ģenerē jaunu ekrānformu pēc teksta apraksta, izmantojot komponentes no `Asset Library` lapas. |
-| **Generate Journey** | Ģenerē vairākus saistītus ekrānus pēc saraksta, piemēram, `Login → Dashboard → Settings`, un savieno tos ar bultiņām. |
+| **Restyle** | Recolors a selected Figma frame based on a text command such as `dark mode`, `high contrast`, or `sepia`. The original frame is left untouched — a restyled duplicate is created instead. |
+| **Generate Library** | Reads the selected Figma frame and builds a structured `Asset Library` page with components and a color palette. If a library already exists, it is extended without creating duplicates. |
+| **Generate Screen** | Generates a new screen from a text description, reusing components from the `Asset Library` page. |
+| **Generate Journey** | Generates several connected screens from a list such as `Login → Dashboard → Settings` and links them with arrows. |
 
-## Kas atrodas projektā?
+## What is in the project?
 
-Projektā ir divas galvenās daļas:
+The project has two main parts:
 
-1. **Figma spraudnis**  
-   Darbojas Figma vidē un veido vai pārveido elementus darba virsmā.
+1. **Figma plugin**
+   Runs inside Figma and creates or transforms elements on the canvas.
 
-2. **Node.js serveris**  
-   Darbojas lokāli datorā un nosūta pieprasījumus uz Anthropic Claude API. API atslēga tiek glabāta servera pusē, nevis Figma spraudnī.
+2. **Node.js server**
+   Runs locally on your machine and forwards requests to the Anthropic Claude API.
+   The API key is stored on the server side, not inside the Figma plugin.
 
-Vienkāršota arhitektūra:
+Simplified architecture:
 
 ```text
-Figma spraudnis  →  Node.js serveris  →  Claude API
+Figma plugin  →  Node.js server  →  Claude API
 ```
 
-## Projekta failu struktūra
+## Project file structure
+
+The code is split into small modules by responsibility (OOP / SOLID principles).
+Each feature has its own service on both the plugin side and the server side.
 
 ```text
 .
-├── code.ts              Galvenais Figma spraudņa fails
-├── code.js              Sakompilēts JavaScript fails
-├── ui.html              Spraudņa lietotāja saskarne
-├── manifest.json        Figma spraudņa konfigurācijas fails
-├── tsconfig.json        TypeScript konfigurācija
-├── package.json         Projekta komandas un atkarības
+├── src/                     Figma plugin source code (TypeScript modules)
+│   ├── main.ts              Entry point — creates services and registers routes
+│   ├── types.ts             Shared interfaces (types)
+│   ├── core/
+│   │   ├── Messenger.ts     The single channel to the UI (figma.ui.postMessage)
+│   │   └── MessageRouter.ts Incoming message router (msg.type → handler)
+│   ├── utils/
+│   │   ├── color.ts         Color conversion (rgb ↔ hex)
+│   │   └── nodes.ts         Node traversal and color replacement
+│   └── services/
+│       ├── RestyleService.ts    Frame recoloring
+│       ├── ScreenService.ts     Screen generation from the Asset Library
+│       ├── JourneyService.ts    UX journey (multi-screen) generation
+│       └── LibraryService.ts    Asset Library creation and color palette
+├── code.js                  Bundled plugin file (what Figma runs; generated)
+├── ui.html                  Plugin user interface
+├── manifest.json            Figma plugin configuration file
+├── tsconfig.json            TypeScript configuration (type checking)
+├── eslint.config.js         Linter configuration
+├── package.json             Plugin scripts and dependencies
 ├── backend/
-│   ├── server.js        Node.js serveris
-│   ├── .env             Claude API atslēga
-│   └── package.json     Servera atkarības
-└── diagrams/            Diagrammas bakalaura darbam
+│   ├── server.js            Node.js server entry point (bootstrap only)
+│   ├── src/
+│   │   ├── claude/ClaudeClient.js   The single place that talks to the Claude API
+│   │   ├── errors.js                Error classes (ParseError, HttpError)
+│   │   ├── utils/jsonRepair.js      Resilient parsing of Claude JSON responses
+│   │   ├── prompts/                 Prompt builders
+│   │   │   ├── restyle.js
+│   │   │   ├── library.js
+│   │   │   └── screen.js
+│   │   ├── services/                Business logic for each feature
+│   │   │   ├── RestyleService.js
+│   │   │   ├── LibraryService.js
+│   │   │   └── ScreenGenerator.js   Three-step screen generation pipeline
+│   │   └── routes/                  Express routes (API endpoints)
+│   │       ├── health.js
+│   │       ├── restyle.js
+│   │       ├── library.js
+│   │       └── screen.js
+│   ├── .env                 Claude API key
+│   └── package.json         Server dependencies
+└── diagrams/                Diagrams for the thesis
 ```
 
-## Kas nepieciešams pirms palaišanas?
+### How does the source code become the plugin?
 
-Pirms spraudņa palaišanas nepieciešams:
+Figma runs only one file — `code.js`. That file is **generated** from the `src/`
+modules with **esbuild**, which bundles all the `import`/`export` modules into a
+single file (Figma cannot load separate modules at runtime).
 
-- instalēts **Node.js**;
-- pieejama **Anthropic Claude API atslēga**;
-- piekļuve **Figma** videi;
-- lejupielādēts šis projekts.
+```text
+src/main.ts (+ all modules)  →  npm run build (esbuild)  →  code.js  →  Figma
+```
 
-Claude API atslēgu var iegūt Anthropic Console vidē.
+So after any change in the `src/` folder you must run `npm run build` again (or
+keep `npm run watch` running) to update `code.js`. The `code.js` file is not stored
+in the Git repository — it is regenerated with `npm run build`.
 
-## Kā palaist projektu?
+On the server side (`backend/`) Node.js supports modules directly, so no build step
+is needed — `server.js` imports the services from `backend/src/` and runs them.
 
-### 1. Instalēt projekta atkarības
+## What is required before running?
 
-Galvenajā projekta mapē jāizpilda:
+Before running the plugin you need:
+
+- **Node.js** installed;
+- an **Anthropic Claude API key**;
+- access to **Figma**;
+- this project downloaded.
+
+You can obtain a Claude API key from the Anthropic Console.
+
+## How to run the project
+
+### 1. Install the project dependencies
+
+In the main project folder run:
 
 ```bash
 npm install
 ```
 
-Pēc tam jāinstalē servera atkarības:
+Then install the server dependencies:
 
 ```bash
 cd backend
@@ -79,130 +132,139 @@ npm install
 cd ..
 ```
 
-### 2. Pievienot Claude API atslēgu
+### 2. Add the Claude API key
 
-Mapē `backend` jāizveido fails:
+In the `backend` folder create a file:
 
 ```text
 .env
 ```
 
-Failā jāievieto sava Claude API atslēga:
+Put your Claude API key into the file:
 
 ```text
 CLAUDE_API_KEY=sk-ant-...
 ```
 
-Svarīgi: `.env` failu nedrīkst publicēt GitHub vai citos publiskos repozitorijos.
+Important: the `.env` file must not be published on GitHub or in other public
+repositories.
 
-### 3. Sakompilēt Figma spraudni
+### 3. Build the Figma plugin
 
-Galvenajā projekta mapē jāizpilda:
+In the main project folder run:
 
 ```bash
 npm run build
 ```
 
-Šī komanda pārveido `code.ts` failu par `code.js`, ko Figma spēj palaist.
+This command bundles the `src/` modules (starting from `src/main.ts`) into the
+`code.js` file that Figma can run.
 
-Izstrādes laikā var izmantot arī:
+During development you can also use:
 
 ```bash
 npm run watch
 ```
 
-### 4. Palaist serveri
+Optional checks:
 
-Jāatver `backend` mape:
+```bash
+npm run typecheck   # TypeScript type checking (no output = OK)
+npm run lint        # code style checks
+```
+
+### 4. Start the server
+
+Open the `backend` folder:
 
 ```bash
 cd backend
 ```
 
-Pēc tam jāpalaiž serveris:
+Then start the server:
 
 ```bash
 npm start
 ```
 
-Serveris darbosies adresē:
+The server will run at:
 
 ```text
 http://localhost:3000
 ```
 
-Terminālis ar palaisto serveri ir jāatstāj atvērts, kamēr tiek lietots spraudnis.
+Keep the terminal with the running server open while using the plugin.
 
-### 5. Pievienot spraudni Figma vidē
+### 5. Import the plugin into Figma
 
-Figma vidē jāveic šādas darbības:
+In Figma do the following:
 
-1. jāatver jebkurš Figma fails;
-2. jāizvēlas **Plugins → Development → Import plugin from manifest...**;
-3. jāizvēlas projekta fails `manifest.json`;
-4. pēc importēšanas spraudni var palaist no **Plugins → Development** sadaļas.
+1. open any Figma file;
+2. choose **Plugins → Development → Import plugin from manifest...**;
+3. select the project's `manifest.json` file;
+4. after importing, run the plugin from **Plugins → Development**.
 
-## Kā lietot spraudni?
+## How to use the plugin
 
 ### Restyle
 
-1. Figma vidē atlasa rāmi.
-2. Spraudnī ievada komandu, piemēram:
+1. Select a frame in Figma.
+2. Enter a command in the plugin, for example:
 
 ```text
 dark mode
 ```
 
-vai
+or
 
 ```text
 high contrast
 ```
 
-3. Spraudnis izveido jaunu pārveidotu rāmja versiju blakus oriģinālam.
+3. The plugin creates a new restyled version of the frame next to the original.
 
 ### Generate Library
 
-1. Figma vidē atlasa rāmi.
-2. Spraudnī nospiež **Generate Asset Library**.
-3. Spraudnis izveido jaunu lapu `Asset Library`.
-4. Šajā lapā tiek ievietotas komponentes, kategorijas un krāsu palete.
+1. Select a frame in Figma.
+2. Press **Generate Asset Library** in the plugin.
+3. The plugin creates a new `Asset Library` page.
+4. Components, categories, and a color palette are placed on this page.
 
 ### Generate Screen
 
-1. Vispirms jāizveido `Asset Library`.
-2. Spraudnī jāievada ekrāna apraksts, piemēram:
+1. First create an `Asset Library`.
+2. Enter a screen description in the plugin, for example:
 
 ```text
 login screen
 ```
 
-vai
+or
 
 ```text
 settings screen
 ```
 
-3. Spraudnis ģenerē jaunu ekrānformu, izmantojot `Asset Library` lapā esošās komponentes.
+3. The plugin generates a new screen reusing the components from the `Asset Library` page.
 
 ### Generate Journey
 
-Spraudnī jāievada vairāki ekrānu nosaukumi, piemēram:
+Enter several screen names in the plugin, for example:
 
 ```text
 Login → Dashboard → Settings
 ```
 
-Spraudnis ģenerē vairākus ekrānus un savieno tos ar bultiņām.
+The plugin generates several screens and connects them with arrows.
 
-## Svarīgi ierobežojumi
+## Important limitations
 
-- Katram lietotājam nepieciešama sava Anthropic Claude API atslēga.
-- Node.js serverim jābūt palaistam lokāli, citādi spraudnis nevarēs sazināties ar Claude API.
-- Ģenerētie rezultāti ne vienmēr ir pilnībā gatavi gala lietošanai, tāpēc tos vēlams pārbaudīt un nepieciešamības gadījumā manuāli pielāgot.
-- Lietotāja ceļa ekrāni tiek ģenerēti atsevišķi, tāpēc starp ekrāniem var būt nelielas atšķirības.
-- Spraudnis ir prototips, nevis pilnībā pabeigts komerciāls produkts.
+- Each user needs their own Anthropic Claude API key.
+- The Node.js server must be running locally, otherwise the plugin cannot reach the Claude API.
+- The generated results are not always fully production-ready, so they should be reviewed and manually adjusted if needed.
+- Journey screens are generated separately, so there may be small differences between screens.
+- The plugin is a prototype, not a fully finished commercial product.
 
-## Licence
+## License
 
-MIT licence.
+MIT license.
