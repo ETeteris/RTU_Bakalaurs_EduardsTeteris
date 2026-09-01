@@ -10,11 +10,20 @@ module.exports = tseslint.config(
   // tseslint.configs.recommended instead.
   tseslint.configs.recommended,
   {
+    // Figma plugin rules need type information — point the parser at tsconfig.
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname,
+      },
+    },
     plugins: {
       '@figma/figma-plugins': figmaPlugin,
     },
     rules: {
       ...figmaPlugin.configs.recommended.rules,
+      // Empty catch blocks are intentional Figma-API guards (best-effort ops).
+      'no-empty': ['error', { allowEmptyCatch: true }],
       // allow underscore-prefixing of unused variables
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -27,6 +36,7 @@ module.exports = tseslint.config(
     },
   },
   {
-    ignores: ['code.js', 'dist', 'eslint.config.js'],
+    // backend/ is a separate CommonJS Node project with its own tooling.
+    ignores: ['code.js', 'dist', 'eslint.config.js', 'backend/**'],
   },
 )

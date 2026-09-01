@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "target": "es6",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "lib": ["es2020", "dom"],
     "strict": true,
     "typeRoots": [
@@ -8,5 +10,6 @@
       "./node_modules/@figma"
     ],
     "skipLibCheck": true
-  }
+  },
+  "include": ["src"]
 }
